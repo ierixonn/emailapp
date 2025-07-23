@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmailApp by ierixon</title>
+    <style>
+        :root {
+            --tg-bg-color: #18222d;
+            --tg-primary-color: #2ea6ff;
+            --tg-secondary-color: #17212b;
+            --tg-text-color: #e1e1e1;
+            --tg-border-color: #2f3d4b;
+            --tg-hover-color: #2b5278;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--tg-bg-color);
+            color: var(--tg-text-color);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100%;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--tg-secondary-color);
+            border-right: 1px solid var(--tg-border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 15px;
+            background-color: var(--tg-secondary-color);
+            border-bottom: 1px solid var(--tg-border-color);
+            font-weight: bold;
+        }
+
+        .messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 8px;
+            word-wrap: break-word;
+        }
+
+        .message-out {
+            background-color: var(--tg-primary-color);
+            color: white;
+            margin-left: auto;
+            border-top-right-radius: 0;
+        }
+
+        .message-in {
+            background-color: var(--tg-secondary-color);
+            margin-right: auto;
+            border-top-left-radius: 0;
+        }
+
+        .message-time {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 5px;
+            display: block;
+            text-align: right;
+        }
+
+        .input-area {
+            padding: 15px;
+            background-color: var(--tg-secondary-color);
+            border-top: 1px solid var(--tg-border-color);
+            display: flex;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 10px 15px;
+            border-radius: 20px;
+            border: none;
+            background-color: var(--tg-bg-color);
+            color: var(--tg-text-color);
+            outline: none;
+        }
+
+        .input-area button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background-color: var(--tg-primary-color);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .input-area button:hover {
+            background-color: #1d8cde;
+        }
+
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            padding: 15px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--tg-border-color);
+            display: flex;
+            align-items: center;
+        }
+
+        .user-item:hover {
+            background-color: var(--tg-hover-color);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--tg-primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .search-bar {
+            padding: 10px;
+            background-color: var(--tg-secondary-color);
+            border-bottom: 1px solid var(--tg-border-color);
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            background-color: var(--tg-bg-color);
+            color: var(--tg-text-color);
+            outline: none;
+        }
+
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
+            background-color: var(--tg-secondary-color);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--tg-primary-color);
+        }
+
+        .login-container input {
+            width: 100%;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--tg-border-color);
+            background-color: var(--tg-bg-color);
+            color: var(--tg-text-color);
+            outline: none;
+        }
+
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--tg-primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .login-container button:hover {
+            background-color: #1d8cde;
+        }
+
+        .error {
+            color: #ff6b6b;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .welcome-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Content will be rendered here -->
+    </div>
+
+    <script>
+        // Database simulation using localStorage
+        class Database {
+            constructor() {
+                this.usersKey = 'emailapp_users';
+                this.messagesKey = 'emailapp_messages';
+                this.currentUserKey = 'emailapp_current_user';
+            }
+
+            // Users
+            getUsers() {
+                return JSON.parse(localStorage.getItem(this.usersKey)) || [];
+            }
+
+            addUser(username) {
+                const users = this.getUsers();
+                if (users.some(u => u.username === username)) {
+                    return false;
+                }
+                
+                const newUser = {
+                    id: this.generateId(),
+                    username: username,
+                    createdAt: new Date().toISOString()
+                };
+                
+                users.push(newUser);
+                localStorage.setItem(this.usersKey, JSON.stringify(users));
+                return true;
+            }
+
+            // Messages
+            getMessages(sender, receiver) {
+                const allMessages = JSON.parse(localStorage.getItem(this.messagesKey)) || [];
+                return allMessages.filter(msg => 
+                    (msg.sender === sender && msg.receiver === receiver) ||
+                    (msg.sender === receiver && msg.receiver === sender)
+                ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            }
+
+            addMessage(sender, receiver, message) {
+                const allMessages = JSON.parse(localStorage.getItem(this.messagesKey)) || [];
+                
+                const newMessage = {
+                    id: this.generateId(),
+                    sender: sender,
+                    receiver: receiver,
+                    message: message,
+                    timestamp: new Date().toISOString()
+                };
+                
+                allMessages.push(newMessage);
+                localStorage.setItem(this.messagesKey, JSON.stringify(allMessages));
+            }
+
+            // Current user
+            setCurrentUser(username) {
+                localStorage.setItem(this.currentUserKey, username);
+            }
+
+            getCurrentUser() {
+                return localStorage.getItem(this.currentUserKey);
+            }
+
+            clearCurrentUser() {
+                localStorage.removeItem(this.currentUserKey);
+            }
+
+            // Helper
+            generateId() {
+                return Math.random().toString(36).substr(2, 9);
+            }
+        }
+
+        // App core
+        class EmailApp {
+            constructor() {
+                this.db = new Database();
+                this.currentChat = null;
+                this.renderLogin();
+                
+                // Add some demo users if none exist
+                if (this.db.getUsers().length === 0) {
+                    this.db.addUser('ierixon');
+                    this.db.addUser('alice');
+                    this.db.addUser('bob');
+                    
+                    // Add demo messages
+                    this.db.addMessage('ierixon', 'alice', 'Привет! Это демо-сообщение');
+                    this.db.addMessage('alice', 'ierixon', 'Привет! Как дела?');
+                }
+            }
+            
+            renderLogin(error = null) {
+                const appEl = document.getElementById('app');
+                appEl.innerHTML = `
+                    <div class="login-container">
+                        <h1>EmailApp</h1>
+                        <p style="text-align: center; margin-bottom: 20px;">by ierixon</p>
+                        ${error ? `<div class="error">${error}</div>` : ''}
+                        <form id="loginForm">
+                            <input type="text" id="usernameInput" placeholder="Choose a username" required>
+                            <button type="submit">Start Messaging</button>
+                        </form>
+                    </div>
+                `;
+                
+                document.getElementById('loginForm').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const username = document.getElementById('usernameInput').value.trim();
+                    
+                    if (!username) {
+                        this.renderLogin('Username cannot be empty');
+                        return;
+                    }
+                    
+                    // For demo purposes, we don't require registration
+                    // Just set the current user
+                    this.db.setCurrentUser(username);
+                    this.renderMain();
+                });
+            }
+            
+            renderMain() {
+                const currentUser = this.db.getCurrentUser();
+                if (!currentUser) {
+                    this.renderLogin();
+                    return;
+                }
+                
+                const appEl = document.getElementById('app');
+                appEl.innerHTML = `
+                    <div class="container">
+                        <div class="sidebar">
+                            <div class="header">Chats</div>
+                            <div class="search-bar">
+                                <input type="text" placeholder="Search users..." id="searchInput">
+                            </div>
+                            <div class="user-list" id="userList"></div>
+                        </div>
+                        <div class="chat-area">
+                            <div class="header" id="chatHeader">Select a chat</div>
+                            <div class="messages" id="messages">
+                                <div class="welcome-screen">
+                                    <div>
+                                        <h3>Welcome to EmailApp</h3>
+                                        <p>Select a chat to start messaging</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-area" style="display: none;" id="inputArea">
+                                <input type="text" placeholder="Write a message..." id="messageInput">
+                                <button id="sendButton">Send</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="position: absolute; top: 10px; right: 10px;">
+                        <button id="logoutButton" style="padding: 5px 10px; background: #ff4d4d; color: white; border: none; border-radius: 3px;">Logout</button>
+                    </div>
+                `;
+                
+                // Load users
+                this.loadUsers();
+                
+                // Event listeners
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.loadUsers(e.target.value);
+                });
+                
+                document.getElementById('sendButton').addEventListener('click', () => {
+                    this.sendMessage();
+                });
+                
+                document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.sendMessage();
+                    }
+                });
+                
+                document.getElementById('logoutButton').addEventListener('click', () => {
+                    this.db.clearCurrentUser();
+                    this.renderLogin();
+                });
+            }
+            
+            loadUsers(searchTerm = '') {
+                const currentUser = this.db.getCurrentUser();
+                const allUsers = this.db.getUsers();
+                const filteredUsers = allUsers.filter(user => 
+                    user.username !== currentUser && 
+                    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                
+                const userListEl = document.getElementById('userList');
+                userListEl.innerHTML = '';
+                
+                if (filteredUsers.length === 0) {
+                    userListEl.innerHTML = '<div style="padding: 20px; text-align: center;">No users found</div>';
+                    return;
+                }
+                
+                filteredUsers.forEach(user => {
+                    const userEl = document.createElement('div');
+                    userEl.className = 'user-item';
+                    userEl.innerHTML = `
+                        <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
+                        <div>${user.username}</div>
+                    `;
+                    
+                    userEl.addEventListener('click', () => {
+                        this.openChat(user.username);
+                    });
+                    
+                    userListEl.appendChild(userEl);
+                });
+            }
+            
+            openChat(username) {
+                const currentUser = this.db.getCurrentUser();
+                this.currentChat = username;
+                
+                document.getElementById('chatHeader').textContent = username;
+                document.getElementById('inputArea').style.display = 'flex';
+                
+                const messages = this.db.getMessages(currentUser, username);
+                const messagesEl = document.getElementById('messages');
+                messagesEl.innerHTML = '';
+                
+                if (messages.length === 0) {
+                    messagesEl.innerHTML = '<div style="text-align: center; padding: 20px;">No messages yet. Start the conversation!</div>';
+                    return;
+                }
+                
+                messages.forEach(msg => {
+                    const isOutgoing = msg.sender === currentUser;
+                    const messageEl = document.createElement('div');
+                    messageEl.className = `message ${isOutgoing ? 'message-out' : 'message-in'}`;
+                    
+                    const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    
+                    messageEl.innerHTML = `
+                        ${msg.message}
+                        <span class="message-time">${time}</span>
+                    `;
+                    
+                    messagesEl.appendChild(messageEl);
+                });
+                
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            }
+            
+            sendMessage() {
+                const currentUser = this.db.getCurrentUser();
+                if (!currentUser || !this.currentChat) return;
+                
+                const inputEl = document.getElementById('messageInput');
+                const message = inputEl.value.trim();
+                
+                if (!message) return;
+                
+                this.db.addMessage(currentUser, this.currentChat, message);
+                inputEl.value = '';
+                this.openChat(this.currentChat);
+            }
+        }
+
+        // Initialize the app
+        new EmailApp();
+    </script>
+</body>
+  </html>
