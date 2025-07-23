@@ -19,6 +19,7 @@
             --message-in-bg: #ffffff;
             --message-in-text: #333333;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --error-color: #ff4757;
         }
 
         .dark-mode {
@@ -34,6 +35,7 @@
             --message-in-bg: #2d3136;
             --message-in-text: #e1e3e6;
             --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            --error-color: #ff6b81;
         }
 
         * {
@@ -435,7 +437,7 @@
         }
 
         .error {
-            color: #ff6b6b;
+            color: var(--error-color);
             margin-bottom: 15px;
             text-align: center;
             font-size: 14px;
@@ -470,6 +472,37 @@
                 transform: translateX(100%);
             }
         }
+
+        /* New styles for user status */
+        .user-status {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .status-online {
+            color: #2ecc71;
+        }
+
+        .status-offline {
+            color: var(--text-color);
+            opacity: 0.5;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -481,9 +514,9 @@
         // Database class with all functionality
         class Database {
             constructor() {
-                this.usersKey = 'emailapp_users_v3';
-                this.messagesKey = 'emailapp_messages_v3';
-                this.currentUserKey = 'emailapp_current_user_v3';
+                this.usersKey = 'emailapp_users_v4';
+                this.messagesKey = 'emailapp_messages_v4';
+                this.currentUserKey = 'emailapp_current_user_v4';
                 this.themeKey = 'emailapp_theme';
                 
                 this.initDemoData();
@@ -494,7 +527,9 @@
                     const demoUsers = [
                         {id: this.generateId(), username: 'ierixon', createdAt: new Date().toISOString()},
                         {id: this.generateId(), username: 'alice', createdAt: new Date().toISOString()},
-                        {id: this.generateId(), username: 'bob', createdAt: new Date().toISOString()}
+                        {id: this.generateId(), username: 'bob', createdAt: new Date().toISOString()},
+                        {id: this.generateId(), username: 'john', createdAt: new Date().toISOString()},
+                        {id: this.generateId(), username: 'emma', createdAt: new Date().toISOString()}
                     ];
                     localStorage.setItem(this.usersKey, JSON.stringify(demoUsers));
                     
@@ -511,6 +546,13 @@
                             sender: 'alice',
                             receiver: 'ierixon',
                             message: 'Привет! Как дела?',
+                            timestamp: new Date().toISOString()
+                        },
+                        {
+                            id: this.generateId(),
+                            sender: 'bob',
+                            receiver: 'ierixon',
+                            message: 'Добрый день! Есть новости?',
                             timestamp: new Date().toISOString()
                         }
                     ];
@@ -542,6 +584,13 @@
 
             searchUsers(searchTerm, excludeUser = null) {
                 const users = this.getUsers();
+                if (!searchTerm) {
+                    // Return all users except the excluded one when search is empty
+                    return excludeUser ? 
+                        users.filter(user => user.username.toLowerCase() !== excludeUser.toLowerCase()) : 
+                        users;
+                }
+                
                 return users.filter(user => {
                     const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase());
                     const isNotExcluded = !excludeUser || user.username.toLowerCase() !== excludeUser.toLowerCase();
@@ -670,6 +719,13 @@
                     // For demo purposes, we don't require registration
                     // Just set the current user
                     this.db.setCurrentUser(username);
+                    
+                    // If this is a new user, add them to the database
+                    const users = this.db.getUsers();
+                    if (!users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                        this.db.addUser(username);
+                    }
+                    
                     this.renderMain();
                 });
             }
@@ -700,7 +756,9 @@
                                 <input type="text" placeholder="Search users..." id="searchInput">
                             </div>
                             
-                            <div class="user-list" id="userList"></div>
+                            <div class="user-list" id="userList">
+                                <div class="spinner"></div>
+                            </div>
                         </div>
                         
                         <div class="chat-area" id="chatArea">
@@ -740,8 +798,10 @@
                     this.updateThemeIcon();
                 });
                 
-                // Load users
-                this.loadUsers();
+                // Load users with a small delay to show spinner
+                setTimeout(() => {
+                    this.loadUsers();
+                }, 300);
                 
                 // Event listeners
                 document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -788,17 +848,35 @@
                 const foundUsers = this.db.searchUsers(searchTerm, currentUser);
                 
                 const userListEl = document.getElementById('userList');
+                
+                // Show loading spinner if no users found yet
+                if (foundUsers.length === 0 && !searchTerm) {
+                    userListEl.innerHTML = '<div class="spinner"></div>';
+                    return;
+                }
+                
                 userListEl.innerHTML = '';
                 
                 if (foundUsers.length === 0) {
-                    userListEl.innerHTML = '<div style="padding: 20px; text-align: center;">No users found</div>';
+                    userListEl.innerHTML = `
+                        <div style="padding: 20px; text-align: center;">
+                            ${searchTerm ? 'No users found' : 'No other users available'}
+                        </div>
+                    `;
                     return;
                 }
                 
                 foundUsers.forEach(user => {
                     const lastMessage = this.db.getLastMessageForUser(currentUser, user.username);
                     const lastMessageText = lastMessage ? 
-                        (lastMessage.sender === currentUser ? 'You: ' : '') + lastMessage.message : 'No messages yet';
+                        (lastMessage.sender === currentUser ? 'You: ' : `${user.username}: `) + 
+                        (lastMessage.message.length > 30 ? 
+                            lastMessage.message.substring(0, 30) + '...' : 
+                            lastMessage.message) : 
+                        'No messages yet';
+                    
+                    // Random online status for demo
+                    const isOnline = Math.random() > 0.3;
                     
                     const userEl = document.createElement('div');
                     userEl.className = 'user-item';
@@ -808,6 +886,9 @@
                         <div class="user-details">
                             <div class="user-name">${user.username}</div>
                             <div class="last-message">${lastMessageText}</div>
+                            <div class="user-status ${isOnline ? 'status-online' : 'status-offline'}">
+                                ${isOnline ? 'online' : 'offline'}
+                            </div>
                         </div>
                     `;
                     
@@ -871,6 +952,9 @@
                     document.getElementById('sidebar').classList.add('hidden');
                     document.getElementById('chatArea').classList.remove('hidden');
                 }
+                
+                // Focus input field
+                document.getElementById('messageInput').focus();
             }
             
             sendMessage() {
